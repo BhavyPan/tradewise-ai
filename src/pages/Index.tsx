@@ -1,16 +1,85 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Sidebar } from "@/components/trademind/Sidebar";
+import { TopBar } from "@/components/trademind/TopBar";
+import { PortfolioOverview } from "@/components/trademind/PortfolioOverview";
+import { RecommendationCard, Recommendation } from "@/components/trademind/RecommendationCard";
+import { Watchlist } from "@/components/trademind/Watchlist";
+import { MarketSentiment } from "@/components/trademind/MarketSentiment";
+import { Sparkles } from "lucide-react";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
-  return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
-  );
-};
+const recs: Recommendation[] = [
+  {
+    symbol: "RELIANCE",
+    name: "Reliance Industries",
+    action: "BUY",
+    confidence: 84,
+    hold: "3–5 days",
+    risk: "Medium",
+    price: "$28.42",
+    reason: "RSI indicates oversold conditions and a strong upward trend is forming on the 4h chart.",
+  },
+  {
+    symbol: "TSLA",
+    name: "Tesla Motors",
+    action: "SELL",
+    confidence: 71,
+    hold: "Exit now",
+    risk: "High",
+    price: "$242.18",
+    reason: "Bearish MACD crossover with weakening volume — likely short-term pullback ahead.",
+  },
+  {
+    symbol: "MSFT",
+    name: "Microsoft",
+    action: "HOLD",
+    confidence: 62,
+    hold: "1–2 weeks",
+    risk: "Low",
+    price: "$421.65",
+    reason: "Consolidating above 50-day MA. Wait for breakout confirmation before adding more.",
+  },
+];
 
-const Index = PlaceholderIndex;
+const Index = () => (
+  <div className="min-h-screen flex bg-background">
+    <Sidebar />
+
+    <main className="flex-1 p-5 md:p-8 max-w-[1400px] mx-auto w-full">
+      <TopBar />
+      <PortfolioOverview />
+
+      <section className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg leading-tight">AI Recommendations</h2>
+              <p className="text-xs text-muted-foreground">Updated 2 minutes ago</p>
+            </div>
+          </div>
+          <button className="text-xs font-semibold text-primary hover:underline">Refresh signals</button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {recs.map((r) => (
+            <RecommendationCard key={r.symbol} rec={r} />
+          ))}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+        <div className="lg:col-span-2">
+          <Watchlist />
+        </div>
+        <MarketSentiment />
+      </section>
+
+      <footer className="text-center text-xs text-muted-foreground py-6">
+        TradeMind AI · Smart suggestions, never auto-trades · Past performance ≠ future results.
+      </footer>
+    </main>
+  </div>
+);
 
 export default Index;
