@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, Pause, Sparkles, Clock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export type Recommendation = {
   symbol: string;
@@ -27,6 +28,12 @@ const riskStyle = {
 export const RecommendationCard = ({ rec }: { rec: Recommendation }) => {
   const style = actionStyle[rec.action];
   const Icon = style.icon;
+
+  const handleAction = () => {
+    toast.success(`${rec.action} signal saved for ${rec.symbol}`, {
+      description: "Reminder added to your alerts.",
+    });
+  };
 
   return (
     <div className="group rounded-2xl bg-gradient-card border border-border p-5 shadow-sm hover:shadow-float hover:-translate-y-0.5 transition-all">
@@ -67,10 +74,17 @@ export const RecommendationCard = ({ rec }: { rec: Recommendation }) => {
         </span>
       </div>
 
-      <div className="flex gap-2 items-start text-xs text-muted-foreground bg-secondary/50 rounded-xl p-3 leading-relaxed">
+      <div className="flex gap-2 items-start text-xs text-muted-foreground bg-secondary/50 rounded-xl p-3 leading-relaxed mb-3">
         <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
         <p>{rec.reason}</p>
       </div>
+
+      <button
+        onClick={handleAction}
+        className={cn("w-full text-xs font-bold rounded-xl py-2.5 text-primary-foreground hover:opacity-90 transition-opacity", style.gradient)}
+      >
+        Save {rec.action} signal
+      </button>
     </div>
   );
 };
