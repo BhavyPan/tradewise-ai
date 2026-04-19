@@ -6,7 +6,7 @@ const items = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
   { icon: Briefcase, label: "Portfolio", to: "/portfolio" },
   { icon: LineChart, label: "Market", to: "/market" },
-  { icon: Bell, label: "Alerts", to: "/alerts", badge: 3 },
+  { icon: Bell, label: "Alerts", to: "/alerts" },
   { icon: Settings, label: "Settings", to: "/settings" },
 ];
 
@@ -39,11 +39,6 @@ export const Sidebar = () => (
         >
           <it.icon className="w-[18px] h-[18px]" />
           <span className="flex-1 text-left">{it.label}</span>
-          {it.badge && (
-            <span className="text-[10px] font-bold bg-danger text-danger-foreground rounded-full px-1.5 py-0.5">
-              {it.badge}
-            </span>
-          )}
         </NavLink>
       ))}
     </nav>

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 type Props = { title?: string; subtitle?: string };
 
-export const TopBar = ({ title = "Good morning, Alex 👋", subtitle = "Here's what your AI assistant found today." }: Props) => {
+export const TopBar = ({ title = "TradeMind AI", subtitle = "Search any real-world stock for live prices." }: Props) => {
   const [dark, setDark] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
