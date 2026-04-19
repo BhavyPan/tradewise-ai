@@ -51,23 +51,28 @@ export async function searchSymbols(query: string): Promise<SearchHit[]> {
 
 export async function getQuote(symbol: string): Promise<StockQuote | null> {
   const data = await callFn({ action: "quote", symbols: symbol });
-  const q = data?.quoteResponse?.result?.[0];
-  if (!q) return null;
+  const r = data?.chart?.result?.[0];
+  const meta = r?.meta;
+  if (!meta) return null;
+  const price = meta.regularMarketPrice ?? 0;
+  const prev = meta.chartPreviousClose ?? meta.previousClose ?? price;
+  const change = price - prev;
+  const changePercent = prev ? (change / prev) * 100 : 0;
   return {
-    symbol: q.symbol,
-    name: q.longName || q.shortName || q.symbol,
-    price: q.regularMarketPrice ?? 0,
-    change: q.regularMarketChange ?? 0,
-    changePercent: q.regularMarketChangePercent ?? 0,
-    currency: q.currency || "USD",
-    exchange: q.fullExchangeName || q.exchange || "",
-    marketState: q.marketState || "",
-    dayHigh: q.regularMarketDayHigh,
-    dayLow: q.regularMarketDayLow,
-    open: q.regularMarketOpen,
-    previousClose: q.regularMarketPreviousClose,
-    marketCap: q.marketCap,
-    volume: q.regularMarketVolume,
+    symbol: meta.symbol,
+    name: meta.longName || meta.shortName || meta.symbol,
+    price,
+    change,
+    changePercent,
+    currency: meta.currency || "USD",
+    exchange: meta.fullExchangeName || meta.exchangeName || "",
+    marketState: meta.marketState || "",
+    dayHigh: meta.regularMarketDayHigh,
+    dayLow: meta.regularMarketDayLow,
+    open: meta.regularMarketOpen ?? meta.chartPreviousClose,
+    previousClose: prev,
+    marketCap: undefined,
+    volume: meta.regularMarketVolume,
   };
 }
 
