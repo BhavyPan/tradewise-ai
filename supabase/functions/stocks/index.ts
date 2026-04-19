@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       target = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0`;
     } else if (action === "quote") {
       const symbols = url.searchParams.get("symbols") || "";
-      target = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
+      target = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbols)}?interval=1d&range=5d`;
     } else {
       return new Response(JSON.stringify({ error: "Unknown action" }), {
         status: 400,
