@@ -49,7 +49,10 @@ export async function searchSymbols(query: string): Promise<SearchHit[]> {
     }));
 }
 
-export async function getQuote(symbol: string): Promise<StockQuote | null> {
+export type HistoryPoint = { t: number; close: number };
+export type QuoteResult = { quote: StockQuote; history: HistoryPoint[] };
+
+export async function getQuote(symbol: string): Promise<QuoteResult | null> {
   const data = await callFn({ action: "quote", symbols: symbol });
   const r = data?.chart?.result?.[0];
   const meta = r?.meta;
@@ -58,22 +61,55 @@ export async function getQuote(symbol: string): Promise<StockQuote | null> {
   const prev = meta.chartPreviousClose ?? meta.previousClose ?? price;
   const change = price - prev;
   const changePercent = prev ? (change / prev) * 100 : 0;
+
+  const timestamps: number[] = r.timestamp || [];
+  const closes: (number | null)[] = r.indicators?.quote?.[0]?.close || [];
+  const history: HistoryPoint[] = timestamps
+    .map((t, i) => ({ t: t * 1000, close: closes[i] as number }))
+    .filter((p) => typeof p.close === "number");
+
   return {
-    symbol: meta.symbol,
-    name: meta.longName || meta.shortName || meta.symbol,
-    price,
-    change,
-    changePercent,
-    currency: meta.currency || "USD",
-    exchange: meta.fullExchangeName || meta.exchangeName || "",
-    marketState: meta.marketState || "",
-    dayHigh: meta.regularMarketDayHigh,
-    dayLow: meta.regularMarketDayLow,
-    open: meta.regularMarketOpen ?? meta.chartPreviousClose,
-    previousClose: prev,
-    marketCap: undefined,
-    volume: meta.regularMarketVolume,
+    quote: {
+      symbol: meta.symbol,
+      name: meta.longName || meta.shortName || meta.symbol,
+      price,
+      change,
+      changePercent,
+      currency: meta.currency || "USD",
+      exchange: meta.fullExchangeName || meta.exchangeName || "",
+      marketState: meta.marketState || "",
+      dayHigh: meta.regularMarketDayHigh,
+      dayLow: meta.regularMarketDayLow,
+      open: meta.regularMarketOpen ?? meta.chartPreviousClose,
+      previousClose: prev,
+      marketCap: undefined,
+      volume: meta.regularMarketVolume,
+    },
+    history,
   };
+}
+
+export type AIRecommendation = {
+  action: "BUY" | "SELL" | "HOLD";
+  confidence: number;
+  risk: "Low" | "Medium" | "High";
+  hold: string;
+  reason: string;
+};
+
+export async function getRecommendation(quote: StockQuote, history: HistoryPoint[]): Promise<AIRecommendation> {
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stock-recommendation`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ANON}`,
+      apikey: ANON,
+    },
+    body: JSON.stringify({ quote, history: history.map((h) => h.close) }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || `Failed (${res.status})`);
+  return data;
 }
 
 export function formatCurrency(value: number, currency = "USD") {
