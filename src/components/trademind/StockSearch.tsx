@@ -1,8 +1,26 @@
-import { Search, Loader2, TrendingUp, TrendingDown, X } from "lucide-react";
+import { Search, Loader2, TrendingUp, TrendingDown, X, Sparkles, Clock, ShieldAlert, Pause } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { searchSymbols, getQuote, formatCurrency, formatCompact, StockQuote, SearchHit } from "@/lib/stocks";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  searchSymbols,
+  getQuote,
+  getRecommendation,
+  formatCurrency,
+  formatCompact,
+  StockQuote,
+  SearchHit,
+  HistoryPoint,
+  AIRecommendation,
+} from "@/lib/stocks";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const actionStyle = {
+  BUY: { bg: "bg-success/10 text-success border-success/30", icon: TrendingUp },
+  SELL: { bg: "bg-danger/10 text-danger border-danger/30", icon: TrendingDown },
+  HOLD: { bg: "bg-warning/10 text-warning border-warning/30", icon: Pause },
+};
+const riskStyle = { Low: "text-success", Medium: "text-warning", High: "text-danger" };
 
 export const StockSearch = () => {
   const [query, setQuery] = useState("");
@@ -11,14 +29,14 @@ export const StockSearch = () => {
   const [searching, setSearching] = useState(false);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [quote, setQuote] = useState<StockQuote | null>(null);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [rec, setRec] = useState<AIRecommendation | null>(null);
+  const [loadingRec, setLoadingRec] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    if (!query.trim()) {
-      setHits([]);
-      return;
-    }
+    if (!query.trim()) { setHits([]); return; }
     setSearching(true);
     debounceRef.current = window.setTimeout(async () => {
       try {
@@ -27,49 +45,46 @@ export const StockSearch = () => {
         setOpen(true);
       } catch {
         toast.error("Search failed. Please try again.");
-      } finally {
-        setSearching(false);
-      }
+      } finally { setSearching(false); }
     }, 300);
-    return () => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    };
+    return () => { if (debounceRef.current) window.clearTimeout(debounceRef.current); };
   }, [query]);
 
-  const pick = async (hit: SearchHit) => {
-    setOpen(false);
-    setQuery(hit.symbol);
+  const loadSymbol = async (symbol: string) => {
     setLoadingQuote(true);
-    setQuote(null);
+    setQuote(null); setHistory([]); setRec(null);
     try {
-      const q = await getQuote(hit.symbol);
-      if (!q) {
-        toast.error("No live data available for this symbol.");
-        return;
-      }
-      setQuote(q);
+      const result = await getQuote(symbol);
+      if (!result) { toast.error("No live data available for this symbol."); return; }
+      setQuote(result.quote);
+      setHistory(result.history);
+      // Fire AI recommendation in background
+      setLoadingRec(true);
+      getRecommendation(result.quote, result.history)
+        .then(setRec)
+        .catch((e) => toast.error(e.message || "AI recommendation failed"))
+        .finally(() => setLoadingRec(false));
     } catch {
       toast.error("Couldn't fetch live price.");
-    } finally {
-      setLoadingQuote(false);
-    }
+    } finally { setLoadingQuote(false); }
   };
 
-  const submit = async (e: React.FormEvent) => {
+  const pick = (hit: SearchHit) => {
+    setOpen(false);
+    setQuery(hit.symbol);
+    loadSymbol(hit.symbol);
+  };
+
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
     if (hits[0]) return pick(hits[0]);
-    setLoadingQuote(true);
-    try {
-      const q = await getQuote(query.trim().toUpperCase());
-      if (!q) toast.error("Symbol not found.");
-      else setQuote(q);
-    } finally {
-      setLoadingQuote(false);
-    }
+    loadSymbol(query.trim().toUpperCase());
   };
 
   const up = (quote?.change ?? 0) >= 0;
+  const chartColor = up ? "hsl(var(--success))" : "hsl(var(--danger))";
+  const RecIcon = rec ? actionStyle[rec.action].icon : Sparkles;
 
   return (
     <div className="rounded-3xl bg-card border border-border shadow-sm p-5 md:p-6">
@@ -94,7 +109,7 @@ export const StockSearch = () => {
             className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
           />
           {query && (
-            <button type="button" onClick={() => { setQuery(""); setQuote(null); setHits([]); }} aria-label="Clear">
+            <button type="button" onClick={() => { setQuery(""); setQuote(null); setHits([]); setRec(null); setHistory([]); }} aria-label="Clear">
               <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
             </button>
           )}
@@ -128,41 +143,134 @@ export const StockSearch = () => {
 
         {!loadingQuote && !quote && (
           <div className="text-center text-sm text-muted-foreground py-10 border border-dashed border-border rounded-xl">
-            Search for a stock to see its real-time price.
+            Search for a stock to see its real-time price, 5-day chart and AI recommendation.
           </div>
         )}
 
         {!loadingQuote && quote && (
-          <div className="rounded-2xl bg-gradient-card border border-border p-5">
-            <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{quote.exchange} · {quote.marketState}</p>
-                <h2 className="text-xl font-bold mt-1">{quote.name}</h2>
-                <p className="text-xs text-muted-foreground font-mono">{quote.symbol}</p>
+          <div className="space-y-5">
+            <div className="rounded-2xl bg-gradient-card border border-border p-5">
+              <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{quote.exchange} · {quote.marketState}</p>
+                  <h2 className="text-xl font-bold mt-1">{quote.name}</h2>
+                  <p className="text-xs text-muted-foreground font-mono">{quote.symbol}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold font-mono">{formatCurrency(quote.price, quote.currency)}</p>
+                  <p className={cn("text-sm font-semibold flex items-center gap-1 justify-end mt-0.5", up ? "text-success" : "text-danger")}>
+                    {up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                    {up ? "+" : ""}{quote.change.toFixed(2)} ({up ? "+" : ""}{quote.changePercent.toFixed(2)}%)
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold font-mono">{formatCurrency(quote.price, quote.currency)}</p>
-                <p className={cn("text-sm font-semibold flex items-center gap-1 justify-end mt-0.5", up ? "text-success" : "text-danger")}>
-                  {up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                  {up ? "+" : ""}{quote.change.toFixed(2)} ({up ? "+" : ""}{quote.changePercent.toFixed(2)}%)
-                </p>
+
+              {history.length > 1 && (
+                <div className="h-44 -mx-2 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={history} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={chartColor} stopOpacity={0.35} />
+                          <stop offset="100%" stopColor={chartColor} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="t"
+                        tickFormatter={(v) => new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        domain={["dataMin", "dataMax"]}
+                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={48}
+                        tickFormatter={(v) => v.toFixed(0)}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                        labelFormatter={(v) => new Date(v as number).toLocaleDateString()}
+                        formatter={(v: number) => [formatCurrency(v, quote.currency), "Close"]}
+                      />
+                      <Area type="monotone" dataKey="close" stroke={chartColor} strokeWidth={2.5} fill="url(#chartFill)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                {[
+                  ["Open", quote.open != null ? formatCurrency(quote.open, quote.currency) : "—"],
+                  ["Prev close", quote.previousClose != null ? formatCurrency(quote.previousClose, quote.currency) : "—"],
+                  ["Day high", quote.dayHigh != null ? formatCurrency(quote.dayHigh, quote.currency) : "—"],
+                  ["Day low", quote.dayLow != null ? formatCurrency(quote.dayLow, quote.currency) : "—"],
+                  ["Volume", formatCompact(quote.volume)],
+                  ["Mkt cap", formatCompact(quote.marketCap)],
+                ].map(([k, v]) => (
+                  <div key={k} className="rounded-xl bg-secondary/50 border border-border p-3">
+                    <p className="text-muted-foreground font-medium uppercase tracking-wider text-[10px]">{k}</p>
+                    <p className="font-bold font-mono mt-0.5">{v}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-              {[
-                ["Open", quote.open != null ? formatCurrency(quote.open, quote.currency) : "—"],
-                ["Prev close", quote.previousClose != null ? formatCurrency(quote.previousClose, quote.currency) : "—"],
-                ["Day high", quote.dayHigh != null ? formatCurrency(quote.dayHigh, quote.currency) : "—"],
-                ["Day low", quote.dayLow != null ? formatCurrency(quote.dayLow, quote.currency) : "—"],
-                ["Volume", formatCompact(quote.volume)],
-                ["Mkt cap", formatCompact(quote.marketCap)],
-              ].map(([k, v]) => (
-                <div key={k} className="rounded-xl bg-secondary/50 border border-border p-3">
-                  <p className="text-muted-foreground font-medium uppercase tracking-wider text-[10px]">{k}</p>
-                  <p className="font-bold font-mono mt-0.5">{v}</p>
+            <div className="rounded-2xl bg-gradient-card border border-border p-5">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+                    <Sparkles className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm leading-tight">AI Recommendation</h3>
+                    <p className="text-[11px] text-muted-foreground">Educational analysis · not financial advice</p>
+                  </div>
                 </div>
-              ))}
+                {rec && (
+                  <div className={cn("flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border", actionStyle[rec.action].bg)}>
+                    <RecIcon className="w-3 h-3" />
+                    {rec.action}
+                  </div>
+                )}
+              </div>
+
+              {loadingRec && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Analyzing with AI…
+                </div>
+              )}
+
+              {!loadingRec && rec && (
+                <>
+                  <div className="flex items-center justify-between mb-2 text-xs">
+                    <span className="font-semibold text-muted-foreground">AI Confidence</span>
+                    <span className="font-bold text-primary">{rec.confidence}%</span>
+                  </div>
+                  <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-4">
+                    <div className="h-full bg-gradient-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs mb-3 flex-wrap">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Clock className="w-3 h-3" /> {rec.hold}
+                    </span>
+                    <span className={cn("flex items-center gap-1 font-semibold", riskStyle[rec.risk])}>
+                      <ShieldAlert className="w-3 h-3" /> {rec.risk} risk
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground bg-secondary/50 rounded-xl p-3 leading-relaxed">
+                    {rec.reason}
+                  </p>
+                </>
+              )}
+
+              {!loadingRec && !rec && (
+                <p className="text-xs text-muted-foreground py-2">No recommendation available yet.</p>
+              )}
             </div>
           </div>
         )}
