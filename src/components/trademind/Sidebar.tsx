@@ -6,7 +6,7 @@ const items = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
   { icon: Briefcase, label: "Portfolio", to: "/portfolio" },
   { icon: LineChart, label: "Market", to: "/market" },
-  { icon: Bell, label: "Alerts", to: "/alerts", badge: 3 },
+  { icon: Bell, label: "Alerts", to: "/alerts" },
   { icon: Settings, label: "Settings", to: "/settings" },
 ];
 
