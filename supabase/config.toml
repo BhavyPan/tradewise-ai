@@ -2,3 +2,6 @@ project_id = "eftxckblilvfkwraumhc"
 
 [functions.stocks]
 verify_jwt = false
+
+[functions.stock-recommendation]
+verify_jwt = false
