@@ -1,0 +1,4 @@
+project_id = "eftxckblilvfkwraumhc"
+
+[functions.stocks]
+verify_jwt = false

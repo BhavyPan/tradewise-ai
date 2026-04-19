@@ -1,10 +1,7 @@
-// Live stock data via Yahoo Finance public endpoints (no API key required).
-// We proxy through a public CORS-friendly mirror to avoid browser CORS issues.
+import { supabase } from "@/integrations/supabase/client";
 
-const QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote";
-const SEARCH_URL = "https://query2.finance.yahoo.com/v1/finance/search";
-// CORS proxy fallback (Yahoo blocks direct browser calls in many regions)
-const PROXY = "https://corsproxy.io/?";
+const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stocks`;
+const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export type StockQuote = {
   symbol: string;
@@ -30,15 +27,18 @@ export type SearchHit = {
   type: string;
 };
 
-async function fetchJson(url: string) {
-  const res = await fetch(PROXY + encodeURIComponent(url));
+async function callFn(params: Record<string, string>) {
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(`${FN_URL}?${qs}`, {
+    headers: { Authorization: `Bearer ${ANON}`, apikey: ANON },
+  });
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
   return res.json();
 }
 
 export async function searchSymbols(query: string): Promise<SearchHit[]> {
   if (!query.trim()) return [];
-  const data = await fetchJson(`${SEARCH_URL}?q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0`);
+  const data = await callFn({ action: "search", q: query });
   return (data.quotes || [])
     .filter((q: any) => q.symbol && q.quoteType !== "OPTION")
     .map((q: any) => ({
@@ -50,24 +50,29 @@ export async function searchSymbols(query: string): Promise<SearchHit[]> {
 }
 
 export async function getQuote(symbol: string): Promise<StockQuote | null> {
-  const data = await fetchJson(`${QUOTE_URL}?symbols=${encodeURIComponent(symbol)}`);
-  const q = data?.quoteResponse?.result?.[0];
-  if (!q) return null;
+  const data = await callFn({ action: "quote", symbols: symbol });
+  const r = data?.chart?.result?.[0];
+  const meta = r?.meta;
+  if (!meta) return null;
+  const price = meta.regularMarketPrice ?? 0;
+  const prev = meta.chartPreviousClose ?? meta.previousClose ?? price;
+  const change = price - prev;
+  const changePercent = prev ? (change / prev) * 100 : 0;
   return {
-    symbol: q.symbol,
-    name: q.longName || q.shortName || q.symbol,
-    price: q.regularMarketPrice ?? 0,
-    change: q.regularMarketChange ?? 0,
-    changePercent: q.regularMarketChangePercent ?? 0,
-    currency: q.currency || "USD",
-    exchange: q.fullExchangeName || q.exchange || "",
-    marketState: q.marketState || "",
-    dayHigh: q.regularMarketDayHigh,
-    dayLow: q.regularMarketDayLow,
-    open: q.regularMarketOpen,
-    previousClose: q.regularMarketPreviousClose,
-    marketCap: q.marketCap,
-    volume: q.regularMarketVolume,
+    symbol: meta.symbol,
+    name: meta.longName || meta.shortName || meta.symbol,
+    price,
+    change,
+    changePercent,
+    currency: meta.currency || "USD",
+    exchange: meta.fullExchangeName || meta.exchangeName || "",
+    marketState: meta.marketState || "",
+    dayHigh: meta.regularMarketDayHigh,
+    dayLow: meta.regularMarketDayLow,
+    open: meta.regularMarketOpen ?? meta.chartPreviousClose,
+    previousClose: prev,
+    marketCap: undefined,
+    volume: meta.regularMarketVolume,
   };
 }
 
@@ -83,3 +88,6 @@ export function formatCompact(value?: number) {
   if (value == null) return "—";
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(value);
 }
+
+// Keep supabase import to ensure client init side-effects load
+void supabase;
