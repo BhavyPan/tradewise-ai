@@ -42,9 +42,6 @@ export const Sidebar = () => (
         </NavLink>
       ))}
     </nav>
-        </NavLink>
-      ))}
-    </nav>
 
     <div className="rounded-2xl p-4 bg-gradient-hero text-primary-foreground">
       <p className="text-xs font-semibold opacity-80 mb-1">Pro Insights</p>
