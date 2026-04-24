@@ -8,6 +8,7 @@ import Portfolio from "./pages/Portfolio.tsx";
 import Market from "./pages/Market.tsx";
 import Alerts from "./pages/Alerts.tsx";
 import Settings from "./pages/Settings.tsx";
+import Chat from "./pages/Chat.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/market" element={<Market />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

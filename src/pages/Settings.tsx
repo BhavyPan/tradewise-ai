@@ -1,8 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/trademind/Sidebar";
 import { TopBar } from "@/components/trademind/TopBar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const STORAGE_KEY = "trademind_settings";
+
+type SettingsData = {
+  notif: boolean;
+  riskAlerts: boolean;
+  auto: boolean;
+  risk: string;
+};
+
+const defaults: SettingsData = {
+  notif: true,
+  riskAlerts: true,
+  auto: false,
+  risk: "medium",
+};
+
+function loadSettings(): SettingsData {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return defaults;
+}
+
+function saveSettings(data: SettingsData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
 
 const Toggle = ({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) => (
   <button
@@ -18,6 +46,21 @@ const Settings = () => {
   const [riskAlerts, setRiskAlerts] = useState(true);
   const [auto, setAuto] = useState(false);
   const [risk, setRisk] = useState("medium");
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = loadSettings();
+    setNotif(saved.notif);
+    setRiskAlerts(saved.riskAlerts);
+    setAuto(saved.auto);
+    setRisk(saved.risk);
+  }, []);
+
+  const handleSave = () => {
+    const data: SettingsData = { notif, riskAlerts, auto, risk };
+    saveSettings(data);
+    toast.success("Preferences saved successfully");
+  };
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -67,7 +110,7 @@ const Settings = () => {
           </section>
 
           <button
-            onClick={() => toast.success("Preferences saved")}
+            onClick={handleSave}
             className="w-full bg-gradient-primary text-primary-foreground font-bold py-3.5 rounded-2xl shadow-elegant hover:shadow-glow transition-shadow"
           >
             Save preferences

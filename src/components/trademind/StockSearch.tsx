@@ -16,11 +16,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const actionStyle = {
-  BUY: { bg: "bg-success/10 text-success border-success/30", icon: TrendingUp },
+  BUY: { bg: "bg-primary/10 text-primary border-primary/30", icon: TrendingUp },
   SELL: { bg: "bg-danger/10 text-danger border-danger/30", icon: TrendingDown },
   HOLD: { bg: "bg-warning/10 text-warning border-warning/30", icon: Pause },
 };
-const riskStyle = { Low: "text-success", Medium: "text-warning", High: "text-danger" };
+const riskStyle = { Low: "text-primary", Medium: "text-warning", High: "text-danger" };
 
 export const StockSearch = () => {
   const [query, setQuery] = useState("");
@@ -58,7 +58,6 @@ export const StockSearch = () => {
       if (!result) { toast.error("No live data available for this symbol."); return; }
       setQuote(result.quote);
       setHistory(result.history);
-      // Fire AI recommendation in background
       setLoadingRec(true);
       getRecommendation(result.quote, result.history)
         .then(setRec)
@@ -83,23 +82,23 @@ export const StockSearch = () => {
   };
 
   const up = (quote?.change ?? 0) >= 0;
-  const chartColor = up ? "hsl(var(--success))" : "hsl(var(--danger))";
+  const chartColor = up ? "hsl(156 100% 50%)" : "hsl(0 85% 60%)";
   const RecIcon = rec ? actionStyle[rec.action].icon : Sparkles;
 
   return (
-    <div className="rounded-3xl bg-card border border-border shadow-sm p-5 md:p-6">
+    <div className="rounded-3xl glass p-5 md:p-6 relative z-10">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
           <Search className="w-4 h-4 text-primary-foreground" />
         </div>
         <div>
-          <h3 className="font-bold text-base leading-tight">Live stock lookup</h3>
+          <h3 className="font-bold text-base leading-tight text-foreground">Live stock lookup</h3>
           <p className="text-xs text-muted-foreground">Search any real-world ticker (e.g. AAPL, TSLA, RELIANCE.NS)</p>
         </div>
       </div>
 
       <form onSubmit={submit} className="relative">
-        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-primary/40">
+        <div className="flex items-center gap-2 glass rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-primary/50">
           {searching ? <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" /> : <Search className="w-4 h-4 text-muted-foreground" />}
           <input
             value={query}
@@ -116,16 +115,16 @@ export const StockSearch = () => {
         </div>
 
         {open && hits.length > 0 && (
-          <div className="absolute z-20 mt-2 w-full rounded-xl bg-popover border border-border shadow-float overflow-hidden">
+          <div className="absolute z-20 mt-2 w-full rounded-xl glass border border-border/40 shadow-float overflow-hidden">
             {hits.map((h) => (
               <button
                 key={h.symbol}
                 type="button"
                 onClick={() => pick(h)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-secondary transition-colors"
+                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-secondary/40 transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{h.symbol} · <span className="text-muted-foreground font-normal">{h.name}</span></p>
+                  <p className="text-sm font-semibold text-foreground truncate">{h.symbol} · <span className="text-muted-foreground font-normal">{h.name}</span></p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{h.type} · {h.exchange}</p>
                 </div>
               </button>
@@ -137,28 +136,28 @@ export const StockSearch = () => {
       <div className="mt-5">
         {loadingQuote && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> Fetching live price…
+            <Loader2 className="w-4 h-4 animate-spin text-primary" /> Fetching live price…
           </div>
         )}
 
         {!loadingQuote && !quote && (
-          <div className="text-center text-sm text-muted-foreground py-10 border border-dashed border-border rounded-xl">
+          <div className="text-center text-sm text-muted-foreground py-10 border border-dashed border-border/40 rounded-xl">
             Search for a stock to see its real-time price, 5-day chart and AI recommendation.
           </div>
         )}
 
         {!loadingQuote && quote && (
           <div className="space-y-5">
-            <div className="rounded-2xl bg-gradient-card border border-border p-5">
+            <div className="rounded-2xl glass border border-border/40 p-5">
               <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{quote.exchange} · {quote.marketState}</p>
-                  <h2 className="text-xl font-bold mt-1">{quote.name}</h2>
+                  <h2 className="text-xl font-bold mt-1 text-foreground">{quote.name}</h2>
                   <p className="text-xs text-muted-foreground font-mono">{quote.symbol}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold font-mono">{formatCurrency(quote.price, quote.currency)}</p>
-                  <p className={cn("text-sm font-semibold flex items-center gap-1 justify-end mt-0.5", up ? "text-success" : "text-danger")}>
+                  <p className="text-3xl font-bold font-mono text-foreground">{formatCurrency(quote.price, quote.currency)}</p>
+                  <p className={cn("text-sm font-semibold flex items-center gap-1 justify-end mt-0.5", up ? "text-primary" : "text-danger")}>
                     {up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {up ? "+" : ""}{quote.change.toFixed(2)} ({up ? "+" : ""}{quote.changePercent.toFixed(2)}%)
                   </p>
@@ -210,22 +209,22 @@ export const StockSearch = () => {
                   ["Volume", formatCompact(quote.volume)],
                   ["Mkt cap", formatCompact(quote.marketCap)],
                 ].map(([k, v]) => (
-                  <div key={k} className="rounded-xl bg-secondary/50 border border-border p-3">
+                  <div key={k} className="rounded-xl bg-secondary/30 border border-border/40 p-3">
                     <p className="text-muted-foreground font-medium uppercase tracking-wider text-[10px]">{k}</p>
-                    <p className="font-bold font-mono mt-0.5">{v}</p>
+                    <p className="font-bold font-mono mt-0.5 text-foreground">{v}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-2xl bg-gradient-card border border-border p-5">
+            <div className="rounded-2xl glass border border-border/40 p-5">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm leading-tight">AI Recommendation</h3>
+                    <h3 className="font-bold text-sm leading-tight text-foreground">AI Recommendation</h3>
                     <p className="text-[11px] text-muted-foreground">Educational analysis · not financial advice</p>
                   </div>
                 </div>
@@ -239,7 +238,7 @@ export const StockSearch = () => {
 
               {loadingRec && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Analyzing with AI…
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" /> Analyzing with AI…
                 </div>
               )}
 
@@ -249,7 +248,7 @@ export const StockSearch = () => {
                     <span className="font-semibold text-muted-foreground">AI Confidence</span>
                     <span className="font-bold text-primary">{rec.confidence}%</span>
                   </div>
-                  <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-4">
+                  <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden mb-4">
                     <div className="h-full bg-gradient-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
                   </div>
 
@@ -262,7 +261,7 @@ export const StockSearch = () => {
                     </span>
                   </div>
 
-                  <p className="text-xs text-muted-foreground bg-secondary/50 rounded-xl p-3 leading-relaxed">
+                  <p className="text-xs text-muted-foreground bg-secondary/30 rounded-xl p-3 leading-relaxed border border-border/40">
                     {rec.reason}
                   </p>
                 </>
